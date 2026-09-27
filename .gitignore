@@ -1,0 +1,8 @@
+target/
+zy.lock
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.o

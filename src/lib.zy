@@ -1,0 +1,86 @@
+import std::c_module as c
+
+native module core = c::load("native/numpy.zlcm.h")
+
+public class Array {
+    private raw: core::Array
+
+    public init(raw: core::Array) {
+        this.raw = raw
+    }
+
+    public fn rows() i64 {
+        return core::rows(this.raw)
+    }
+
+    public fn columns() i64 {
+        return core::columns(this.raw)
+    }
+
+    public fn length() i64 {
+        return core::length(this.raw)
+    }
+
+    public fn get(row: i64, column: i64) f64 throws Error {
+        if row < 0 || row >= this.rows() || column < 0 || column >= this.columns() {
+            stop "numpy Array index out of range"
+        }
+        return core::get(this.raw, row, column)
+    }
+
+    public mut fn set(row: i64, column: i64, value: f64) void throws Error {
+        if row < 0 || row >= this.rows() || column < 0 || column >= this.columns() {
+            stop "numpy Array index out of range"
+        }
+        core::set(this.raw, row, column, value)
+    }
+
+    public fn sum() f64 {
+        return core::sum(this.raw)
+    }
+
+    public fn mean() f64 throws Error {
+        if this.length() == 0 {
+            stop "cannot calculate the mean of an empty Array"
+        }
+        return core::sum(this.raw) / (f64)this.length()
+    }
+
+    public fn add(other: Array) Array throws Error {
+        return Array(core::add(this.raw, other.raw))
+    }
+
+    public fn scale(factor: f64) Array throws Error {
+        return Array(core::scale(this.raw, factor))
+    }
+
+    public fn matmul(other: Array) Array throws Error {
+        return Array(core::matmul(this.raw, other.raw))
+    }
+
+    public fn to_list() List<f64> throws Error {
+        let values: List<f64> = []
+        let index: i64 = 0
+        while index < this.length() {
+            LIST_PUSH__(values, this.get(index / this.columns(), index % this.columns()))
+            index = index + 1
+        }
+        return values
+    }
+}
+
+public fn zeros(rows: i64, columns: i64) Array throws Error {
+    return Array(core::zeros(rows, columns))
+}
+
+public fn full(rows: i64, columns: i64, value: f64) Array throws Error {
+    return Array(core::full(rows, columns, value))
+}
+
+public fn from_list(values: List<f64>, rows: i64, columns: i64) Array throws Error {
+    return Array(core::from_slice(rows, columns, c::slice(&values)))
+}
+
+public fn identity(size: i64) Array throws Error {
+    return Array(core::identity(size))
+}

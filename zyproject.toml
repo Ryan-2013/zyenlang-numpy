@@ -1,0 +1,21 @@
+[package]
+name = "numpy"
+version = "0.1.0"
+zyen = ">=0.3.1"
+entry = "src/lib.zy"
+
+[build]
+default-target = "lib"
+target-dir = "target"
+
+[targets.lib]
+kind = "c-source"
+entry = "src/lib.zy"
+output-name = "zyen_numpy"
+
+[targets.test-basic]
+kind = "bin"
+entry = "tests/basic.zy"
+output-name = "numpy-test"
+
+[dependencies]

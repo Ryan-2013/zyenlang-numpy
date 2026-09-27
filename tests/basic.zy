@@ -1,0 +1,26 @@
+import crate::lib as np
+
+fn main() i32 throws Error {
+    let left = np::from_list([1.0, 2.0, 3.0, 4.0], 2, 2)
+    let right = np::identity(2)
+    let result = left.matmul(right).scale(2.0)
+    if result.rows() != 2 || result.columns() != 2 {
+        return 1
+    }
+    if result.get(0, 0) != 2.0 || result.get(1, 1) != 8.0 {
+        return 2
+    }
+    result.set(0, 1, 10.0)
+    if result.sum() != 24.0 || result.mean() != 6.0 {
+        return 3
+    }
+    let combined = result.add(np::full(2, 2, 1.0))
+    if combined.get(0, 1) != 11.0 {
+        return 4
+    }
+    let values = combined.to_list()
+    if LIST_LEN__(values) != 4 || LIST_GET__(values, 3) != 9.0 {
+        return 5
+    }
+    return 0
+}
