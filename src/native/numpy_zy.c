@@ -142,18 +142,102 @@ double zy_numpy_sum(ZL_Handle handle) {
     return total;
 }
 
-ZL_Handle zy_numpy_add(ZL_Handle left_handle, ZL_Handle right_handle) {
+double zy_numpy_minimum(ZL_Handle handle) {
+    ZyNumpyArray* array = zy_numpy_data(handle);
+    size_t count = (size_t)(array->rows * array->columns);
+    if (count == 0) return 0.0;
+    double result = array->values[0];
+    for (size_t index = 1; index < count; ++index) {
+        if (array->values[index] < result) result = array->values[index];
+    }
+    return result;
+}
+
+double zy_numpy_maximum(ZL_Handle handle) {
+    ZyNumpyArray* array = zy_numpy_data(handle);
+    size_t count = (size_t)(array->rows * array->columns);
+    if (count == 0) return 0.0;
+    double result = array->values[0];
+    for (size_t index = 1; index < count; ++index) {
+        if (array->values[index] > result) result = array->values[index];
+    }
+    return result;
+}
+
+ZL_Handle zy_numpy_copy(ZL_Handle handle) {
+    ZyNumpyArray* source = zy_numpy_data(handle);
+    ZyNumpyArray* result = zy_numpy_allocate(source->rows, source->columns);
+    if (result == NULL) return (ZL_Handle){0};
+    size_t count = (size_t)(source->rows * source->columns);
+    if (count > 0) memcpy(result->values, source->values, count * sizeof(double));
+    return zy_numpy_wrap(result);
+}
+
+ZL_Handle zy_numpy_reshape(ZL_Handle handle, int64_t rows, int64_t columns) {
+    ZyNumpyArray* source = zy_numpy_data(handle);
+    size_t requested = 0;
+    if (!zy_numpy_element_count(rows, columns, &requested)) return (ZL_Handle){0};
+    size_t available = (size_t)(source->rows * source->columns);
+    if (requested != available) {
+        zy_numpy_set_error("numpy reshape must preserve the element count");
+        return (ZL_Handle){0};
+    }
+    ZyNumpyArray* result = zy_numpy_allocate(rows, columns);
+    if (result == NULL) return (ZL_Handle){0};
+    if (available > 0) memcpy(result->values, source->values, available * sizeof(double));
+    return zy_numpy_wrap(result);
+}
+
+ZL_Handle zy_numpy_transpose(ZL_Handle handle) {
+    ZyNumpyArray* source = zy_numpy_data(handle);
+    ZyNumpyArray* result = zy_numpy_allocate(source->columns, source->rows);
+    if (result == NULL) return (ZL_Handle){0};
+    for (int64_t row = 0; row < source->rows; ++row) {
+        for (int64_t column = 0; column < source->columns; ++column) {
+            result->values[(size_t)(column * result->columns + row)] =
+                source->values[(size_t)(row * source->columns + column)];
+        }
+    }
+    return zy_numpy_wrap(result);
+}
+
+typedef double (*ZyNumpyBinaryOperation)(double left, double right);
+
+static double zy_numpy_add_values(double left, double right) { return left + right; }
+static double zy_numpy_subtract_values(double left, double right) { return left - right; }
+static double zy_numpy_multiply_values(double left, double right) { return left * right; }
+
+static ZL_Handle zy_numpy_binary(
+    ZL_Handle left_handle,
+    ZL_Handle right_handle,
+    const char* operation,
+    ZyNumpyBinaryOperation apply
+) {
     ZyNumpyArray* left = zy_numpy_data(left_handle);
     ZyNumpyArray* right = zy_numpy_data(right_handle);
     if (left->rows != right->rows || left->columns != right->columns) {
-        zy_numpy_set_error("numpy add requires equal shapes");
+        snprintf(zy_numpy_error, sizeof(zy_numpy_error), "numpy %s requires equal shapes", operation);
         return (ZL_Handle){0};
     }
     ZyNumpyArray* result = zy_numpy_allocate(left->rows, left->columns);
     if (result == NULL) return (ZL_Handle){0};
     size_t count = (size_t)(left->rows * left->columns);
-    for (size_t index = 0; index < count; ++index) result->values[index] = left->values[index] + right->values[index];
+    for (size_t index = 0; index < count; ++index) {
+        result->values[index] = apply(left->values[index], right->values[index]);
+    }
     return zy_numpy_wrap(result);
+}
+
+ZL_Handle zy_numpy_add(ZL_Handle left_handle, ZL_Handle right_handle) {
+    return zy_numpy_binary(left_handle, right_handle, "add", zy_numpy_add_values);
+}
+
+ZL_Handle zy_numpy_subtract(ZL_Handle left_handle, ZL_Handle right_handle) {
+    return zy_numpy_binary(left_handle, right_handle, "subtract", zy_numpy_subtract_values);
+}
+
+ZL_Handle zy_numpy_multiply(ZL_Handle left_handle, ZL_Handle right_handle) {
+    return zy_numpy_binary(left_handle, right_handle, "multiply", zy_numpy_multiply_values);
 }
 
 ZL_Handle zy_numpy_scale(ZL_Handle handle, double factor) {

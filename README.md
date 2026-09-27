@@ -1,4 +1,4 @@
-# numpy for ZyenLang
+# numpy for ZyenLang 0.2.0
 
 A small, dependency-free numeric array package for ZyenLang 0.3. It uses an
 ABI v3 ARC handle backed by contiguous `f64` memory.
@@ -12,9 +12,10 @@ import numpy as np
 import std::io as io
 
 fn main() i32 throws Error {
-    let left = np::from_list([1.0, 2.0, 3.0, 4.0], 2, 2)
+    let left = np::from_nested([[1.0, 2.0], [3.0, 4.0]])
     let right = np::identity(2)
-    let result = left.matmul(right).scale(2.0)
+    let result = left.matmul(right).transpose().scale(2.0)
+    let shape = result.shape()
     io::print((str)result.get(1, 1))
     return 0
 }
@@ -22,11 +23,18 @@ fn main() i32 throws Error {
 
 ## API
 
-- `zeros(rows, columns)`, `full(rows, columns, value)`, `identity(size)`
-- `from_list(values, rows, columns)`
-- `Array.rows()`, `columns()`, `length()`, `get()`, `set()`
-- `Array.sum()`, `mean()`, `add()`, `scale()`, `matmul()`, `to_list()`
+- Constructors: `zeros`, `full`, `identity`, `from_list`, `from_nested`
+- Shape and indexing: `shape`, `rows`, `columns`, `length`, `get`, `set`
+- Layout: `copy`, `reshape`, `transpose`
+- Arithmetic: `add`, `subtract`, `multiply`, `scale`, `matmul`
+- Reductions: `sum`, `mean`, `minimum`, `maximum`
+- Conversion: `to_list`, `to_nested`
 
-Dimensions and indexes are checked. Array storage is released when the final
-`Array` reference leaves scope. The package is intentionally not a full NumPy
-clone; it is the stable numeric foundation on which larger packages can grow.
+`from_nested` uses `LIST_SHAPE__()` and rejects ragged input. Dimensions,
+indexes, reshape element counts, and binary-operation shapes are checked.
+Operations that return an `Array` allocate an independent result; native
+storage is released when the final ARC reference leaves scope.
+
+The package is intentionally a two-dimensional contiguous `f64` array library,
+not a complete Python NumPy clone. This keeps its ABI small and predictable for
+game engines and C interop.

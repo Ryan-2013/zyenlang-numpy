@@ -1,7 +1,36 @@
 import crate::lib as np
 
+fn rejects_ragged_input() bool {
+    let ragged: List<List<f64>> = [[1.0], [2.0, 3.0]]
+    np::from_nested(ragged) catch err {
+        return err.message == "LIST_SHAPE__ requires a rectangular nested List"
+    }
+    return false
+}
+
+fn rejects_invalid_reshape(array: np::Array) bool {
+    array.reshape(3, 2) catch err {
+        return err.message == "numpy reshape must preserve the element count"
+    }
+    return false
+}
+
+fn rejects_mismatched_add(left: np::Array, right: np::Array) bool {
+    left.add(right) catch err {
+        return err.message == "numpy add requires equal shapes"
+    }
+    return false
+}
+
+fn rejects_empty_minimum(array: np::Array) bool {
+    array.minimum() catch err {
+        return err.message == "cannot calculate the minimum of an empty Array"
+    }
+    return false
+}
+
 fn main() i32 throws Error {
-    let left = np::from_list([1.0, 2.0, 3.0, 4.0], 2, 2)
+    let left = np::from_nested([[1.0, 2.0], [3.0, 4.0]])
     let right = np::identity(2)
     let result = left.matmul(right).scale(2.0)
     if result.rows() != 2 || result.columns() != 2 {
@@ -21,6 +50,58 @@ fn main() i32 throws Error {
     let values = combined.to_list()
     if LIST_LEN__(values) != 4 || LIST_GET__(values, 3) != 9.0 {
         return 5
+    }
+
+    let shape = combined.shape()
+    if LIST_LEN__(shape) != 2 || shape[0] != 2 || shape[1] != 2 {
+        return 6
+    }
+
+    let transposed = combined.transpose()
+    if transposed.get(1, 0) != 11.0 || transposed.get(0, 1) != 7.0 {
+        return 7
+    }
+
+    let reshaped = combined.reshape(1, 4)
+    if reshaped.rows() != 1 || reshaped.columns() != 4 || reshaped.get(0, 3) != 9.0 {
+        return 8
+    }
+
+    let copied = left.copy()
+    copied.set(0, 0, 99.0)
+    if left.get(0, 0) != 1.0 || copied.get(0, 0) != 99.0 {
+        return 9
+    }
+
+    let delta = combined.subtract(np::full(2, 2, 1.0))
+    let squared = delta.multiply(delta)
+    if delta.get(0, 1) != 10.0 || squared.get(0, 1) != 100.0 {
+        return 10
+    }
+
+    if combined.minimum() != 3.0 || combined.maximum() != 11.0 {
+        return 11
+    }
+
+    let nested = combined.to_nested()
+    let nested_shape = LIST_SHAPE__(nested)
+    if nested_shape[0] != 2 || nested_shape[1] != 2 || nested[1][1] != 9.0 {
+        return 12
+    }
+
+    if !rejects_ragged_input() || !rejects_invalid_reshape(left) {
+        return 13
+    }
+
+    let empty_values: List<List<f64>> = []
+    let empty = np::from_nested(empty_values)
+    let empty_shape = empty.shape()
+    if empty_shape[0] != 0 || empty_shape[1] != 0 || !rejects_empty_minimum(empty) {
+        return 14
+    }
+
+    if !rejects_mismatched_add(left, np::zeros(1, 4)) {
+        return 15
     }
     return 0
 }

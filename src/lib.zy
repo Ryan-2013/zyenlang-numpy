@@ -21,6 +21,10 @@ public class Array {
         return core::length(this.raw)
     }
 
+    public fn shape() List<usize> {
+        return [(usize)this.rows(), (usize)this.columns()]
+    }
+
     public fn get(row: i64, column: i64) f64 throws Error {
         if row < 0 || row >= this.rows() || column < 0 || column >= this.columns() {
             stop "numpy Array index out of range"
@@ -46,8 +50,42 @@ public class Array {
         return core::sum(this.raw) / (f64)this.length()
     }
 
+    public fn minimum() f64 throws Error {
+        if this.length() == 0 {
+            stop "cannot calculate the minimum of an empty Array"
+        }
+        return core::minimum(this.raw)
+    }
+
+    public fn maximum() f64 throws Error {
+        if this.length() == 0 {
+            stop "cannot calculate the maximum of an empty Array"
+        }
+        return core::maximum(this.raw)
+    }
+
+    public fn copy() Array throws Error {
+        return Array(core::copy(this.raw))
+    }
+
+    public fn reshape(rows: i64, columns: i64) Array throws Error {
+        return Array(core::reshape(this.raw, rows, columns))
+    }
+
+    public fn transpose() Array throws Error {
+        return Array(core::transpose(this.raw))
+    }
+
     public fn add(other: Array) Array throws Error {
         return Array(core::add(this.raw, other.raw))
+    }
+
+    public fn subtract(other: Array) Array throws Error {
+        return Array(core::subtract(this.raw, other.raw))
+    }
+
+    public fn multiply(other: Array) Array throws Error {
+        return Array(core::multiply(this.raw, other.raw))
     }
 
     public fn scale(factor: f64) Array throws Error {
@@ -67,6 +105,22 @@ public class Array {
         }
         return values
     }
+
+    public fn to_nested() List<List<f64>> throws Error {
+        let values: List<List<f64>> = []
+        let row_index: i64 = 0
+        while row_index < this.rows() {
+            let row: List<f64> = []
+            let column_index: i64 = 0
+            while column_index < this.columns() {
+                LIST_PUSH__(row, this.get(row_index, column_index))
+                column_index = column_index + 1
+            }
+            LIST_PUSH__(values, row)
+            row_index = row_index + 1
+        }
+        return values
+    }
 }
 
 public fn zeros(rows: i64, columns: i64) Array throws Error {
@@ -79,6 +133,24 @@ public fn full(rows: i64, columns: i64, value: f64) Array throws Error {
 
 public fn from_list(values: List<f64>, rows: i64, columns: i64) Array throws Error {
     return Array(core::from_slice(rows, columns, c::slice(&values)))
+}
+
+public fn from_nested(values: List<List<f64>>) Array throws Error {
+    let shape: List<usize> = LIST_SHAPE__(values)
+    let rows: usize = shape[0]
+    let columns: usize = shape[1]
+    let flat: List<f64> = []
+    let row_index: i32 = 0
+    while (usize)row_index < rows {
+        let row: List<f64> = values[row_index]
+        let column_index: i32 = 0
+        while (usize)column_index < columns {
+            LIST_PUSH__(flat, row[column_index])
+            column_index = column_index + 1
+        }
+        row_index = row_index + 1
+    }
+    return from_list(flat, (i64)rows, (i64)columns)
 }
 
 public fn identity(size: i64) Array throws Error {
