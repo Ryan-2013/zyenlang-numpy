@@ -21,22 +21,55 @@ public class Array {
         return core::length(this.raw)
     }
 
+    public fn rank() usize {
+        return core::rank(this.raw)
+    }
+
     public fn shape() List<usize> {
-        return [(usize)this.rows(), (usize)this.columns()]
+        let dimensions: List<usize> = []
+        let axis: usize = 0
+        while axis < this.rank() {
+            LIST_PUSH__(dimensions, core::dimension(this.raw, axis))
+            axis = axis + (usize)1
+        }
+        return dimensions
+    }
+
+    private fn validate_indices(indices: List<usize>) void throws Error {
+        if LIST_LEN__(indices) != this.rank() {
+            stop "numpy index rank does not match Array rank"
+        }
+        let axis: i32 = 0
+        while (usize)axis < this.rank() {
+            if indices[axis] >= core::dimension(this.raw, (usize)axis) {
+                stop "numpy Array index out of range"
+            }
+            axis = axis + 1
+        }
     }
 
     public fn get(row: i64, column: i64) f64 throws Error {
-        if row < 0 || row >= this.rows() || column < 0 || column >= this.columns() {
+        if this.rank() != 2 || row < 0 || row >= this.rows() || column < 0 || column >= this.columns() {
             stop "numpy Array index out of range"
         }
         return core::get(this.raw, row, column)
     }
 
     public mut fn set(row: i64, column: i64, value: f64) void throws Error {
-        if row < 0 || row >= this.rows() || column < 0 || column >= this.columns() {
+        if this.rank() != 2 || row < 0 || row >= this.rows() || column < 0 || column >= this.columns() {
             stop "numpy Array index out of range"
         }
         core::set(this.raw, row, column, value)
+    }
+
+    public fn get_at(indices: List<usize>) f64 throws Error {
+        this.validate_indices(indices)
+        return core::get_at(this.raw, c::slice(&indices))
+    }
+
+    public mut fn set_at(indices: List<usize>, value: f64) void throws Error {
+        this.validate_indices(indices)
+        core::set_at(this.raw, c::slice(&indices), value)
     }
 
     public fn sum() f64 {
@@ -70,6 +103,10 @@ public class Array {
 
     public fn reshape(rows: i64, columns: i64) Array throws Error {
         return Array(core::reshape(this.raw, rows, columns))
+    }
+
+    public fn reshape_shape(shape: List<usize>) Array throws Error {
+        return Array(core::reshape_shape(this.raw, c::slice(&shape)))
     }
 
     public fn transpose() Array throws Error {
@@ -107,6 +144,9 @@ public class Array {
     }
 
     public fn to_nested() List<List<f64>> throws Error {
+        if this.rank() != 2 {
+            stop "to_nested requires a rank-2 Array"
+        }
         let values: List<List<f64>> = []
         let row_index: i64 = 0
         while row_index < this.rows() {
@@ -127,12 +167,28 @@ public fn zeros(rows: i64, columns: i64) Array throws Error {
     return Array(core::zeros(rows, columns))
 }
 
+public fn zeros_shape(shape: List<usize>) Array throws Error {
+    return Array(core::zeros_shape(c::slice(&shape)))
+}
+
 public fn full(rows: i64, columns: i64, value: f64) Array throws Error {
     return Array(core::full(rows, columns, value))
 }
 
+public fn full_shape(shape: List<usize>, value: f64) Array throws Error {
+    return Array(core::full_shape(c::slice(&shape), value))
+}
+
+public fn generate(shape: List<usize>, value: f64) Array throws Error {
+    return full_shape(shape, value)
+}
+
 public fn from_list(values: List<f64>, rows: i64, columns: i64) Array throws Error {
     return Array(core::from_slice(rows, columns, c::slice(&values)))
+}
+
+public fn from_shape(values: List<f64>, shape: List<usize>) Array throws Error {
+    return Array(core::from_shape(c::slice(&shape), c::slice(&values)))
 }
 
 public fn from_nested(values: List<List<f64>>) Array throws Error {

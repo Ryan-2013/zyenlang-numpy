@@ -1,9 +1,11 @@
-import numpy as np
+import crate::lib as np
 import std::io as io
 
 fn main() i32 throws Error {
     let matrix = np::from_nested([[1.0, 2.0], [3.0, 4.0]])
-    let result = matrix.matmul(np::identity(2)).transpose()
+    let result = matrix
+        .matmul(np::identity(2))
+        .transpose()
     io::print(f"shape={result.rows()}x{result.columns()}")
     io::print((str)result.get(0, 1))
     return 0

@@ -29,6 +29,20 @@ fn rejects_empty_minimum(array: np::Array) bool {
     return false
 }
 
+fn rejects_nd_to_nested(array: np::Array) bool {
+    array.to_nested() catch err {
+        return err.message == "to_nested requires a rank-2 Array"
+    }
+    return false
+}
+
+fn rejects_oversized_shape() bool {
+    np::zeros_shape([100000001]) catch err {
+        return err.message == "numpy Array is too large"
+    }
+    return false
+}
+
 fn main() i32 throws Error {
     let left = np::from_nested([[1.0, 2.0], [3.0, 4.0]])
     let right = np::identity(2)
@@ -102,6 +116,41 @@ fn main() i32 throws Error {
 
     if !rejects_mismatched_add(left, np::zeros(1, 4)) {
         return 15
+    }
+
+    let volume = np::generate([2, 3, 4], 1.5)
+    let volume_shape = volume.shape()
+    if volume.rank() != 3 || volume.length() != 24 || volume_shape[0] != 2 || volume_shape[1] != 3 || volume_shape[2] != 4 {
+        return 16
+    }
+
+    volume.set_at([1, 2, 3], 9.0)
+    if volume.get_at([1, 2, 3]) != 9.0 || volume.sum() != 43.5 {
+        return 17
+    }
+
+    let volume_matrix = volume.reshape_shape([4, 6])
+    if volume_matrix.rank() != 2 || volume_matrix.get(3, 5) != 9.0 {
+        return 18
+    }
+
+    let tensor = np::from_shape([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], [2, 2, 2])
+    if tensor.get_at([1, 0, 1]) != 6.0 || !rejects_nd_to_nested(tensor) {
+        return 19
+    }
+
+    let scalar = np::full_shape([], 4.0)
+    if scalar.rank() != 0 || scalar.length() != 1 || scalar.get_at([]) != 4.0 {
+        return 20
+    }
+
+    let zero_dimension = np::zeros_shape([2, 0, 3])
+    if zero_dimension.length() != 0 || zero_dimension.shape()[1] != 0 {
+        return 21
+    }
+
+    if !rejects_oversized_shape() {
+        return 22
     }
     return 0
 }
